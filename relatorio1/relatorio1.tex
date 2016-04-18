@@ -40,11 +40,27 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introdução}
 
+\pagebreak
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % PROBLEMA
 % Abordagem do tema/problema
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problema}
+O escalonador do Linux é baseado em compartilhamento de tempo por prioridades, ou seja cada tarefa é executada até que a sua fatia de tempo, também chamada de quantum, expire, e um processo de prioridade mais alta torne-se executável ou o processo atual bloqueie. O kernel Linux utiliza três diferentes políticas de escalonamento, cada qual atende a tipos diferentes de processo.
+
+\subsection{Escalonador FIFO}
+A primeira política de escalonamento utilizada pelo Linux é a do escalonador FIFO (First In First Out). Essa política é válida apenas para processos de tempo real e prevê que quando um processo é alocado ao processador, ele executa normalmente até que uma de quatro situações ocorra: um processo também de tempo real e de prioridade mais alta for apto a ser executado, assim o processo cede o processador para essa nova tarefa, ou o processo libera espontaneamente o processador para um processo de prioridade igual à sua, ou o processador é bloqueado em uma operação de entrada e saída e na última hipótese, o processo termina. \cite{Oliveira2008}
+
+\subsection{Escalonador Round Robin}
+Outra política existente é a do escalonador Round Robin (RR) comumente utilizado em sistemas de tempo compartilhado. O sistema operacional determina uma quantidade de tempo o quantum, que diz o tempo que o processador terá para trabalhar com o processo e é criada uma fila circular onde os processos serão incluídos. Com isso cada tarefa da fila é trabalhada até que o seu quantum expire e o sistema pare-as, sofrendo assim a preempção, e logo em seguida a próxima toma o lugar, fazendo isso até que todas sejam finalizadas. Essa política também é usada apenas em processos de tempo real. \cite{Deitel2006}
+
+\subsection{Escalonador Other}
+A última política utilizada pelo kernel Linux corresponde a uma fila com vários níveis de prioridades dinâmicas com tempo compartilhado para cada processo. Os processos interativos e \emph{batch} (processos estáticos) são escalonados através deste escalonador (\emph{sched\_other}).
+
+\pagebreak
+
+O problema, entretanto, com as políticas utilizadas pelo escalonador de processos do kernel Linux é a possibilidade de ocorrência de \emph{starvation}, problema este que pode ser resolvido com a distribuição de prioridades não-nulas, como implementado na política de escalonamento de loteria (\emph{lottery scheduling}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SOLUÇÃO
@@ -61,8 +77,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % REFERÊNCIAS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{thebibliography}{99}
-\bibitem{LinuxWikipedia} Wikipedia. \emph{Linux}. 2016. \url{https://en.wikipedia.org/wiki/Linux}
+\begin{thebibliography}{9}
+\bibitem{LinuxWikipedia2016} Wikipedia. \emph{Linux}. 2016. \url{https://en.wikipedia.org/wiki/Linux}
+\bibitem{Oliveira2008} Rômulo S. de Oliveira, Alexandre da S. Carissimi, Simão S. Toscani. \emph{Sistemas Operacionais}. 2008.
+\bibitem{Deitel2006} Harvey M. Deitel, Paul J. Deitel, David R. Choffnes. \emph{Operating Systems}. 2006.
 \end{thebibliography}
 
 \end{document}
