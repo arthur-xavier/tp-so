@@ -9,6 +9,8 @@
 % ASM packages
 \usepackage{amsmath, amstext}
 
+\setlength{\parskip}{0.5em}
+
 % CABEÇALHO
 \title{Proposta de uma política de escalonamento de loteria para o kernel Linux}
 \author{
@@ -39,8 +41,13 @@
 % Pequena descrição e vantagens
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introdução}
+Linux é o software Open Source mais conhecido e mais utilizado do mundo. Se desenvolveu em um sistema operacional para negócios, educação e de uso pessoal. É um sistema operacional de propósito geral de código aberto. \cite{Welsh1998}
 
-\pagebreak
+A primeira versão do kernel Linux foi publicada em 5 de outubro de 1991 por Linus Torvalds como um clone do sistema operacional UNIX. Linux foi desenvolvido originalmente como um sistema operacional gratuito para computadores pessoais baseado na arquitetura Intel x86, mas desde então tem sido portado para mais plataformas do que qualquer outro sistema operacional. Devido à dominância do s.o. Android em smartphones, o Linux tem a maior base de instalações de todos os sistemas operacionais de propósito geral.
+
+A utilização de um sistema operacional baseado em Linux (chamadas \emph{distribuições} ou \emph{distros}) provê diversas vantagens para os usuários e também para os desenvolvedores e mantenedores destes sistemas, dentre elas, principalmente, liberdade, estabilidade e segurança.
+
+Por ser um sistema operacional de código aberto, Linux é gratuito, e possui diversas versões e distribuições. O usuário pode escolher qual das milhares de distribuições pode atender melhor a seu uso específico e pode, inclusive, escrever sua própria versão ou alterar uma já existente. Estabilidade e segurança também são fatores que decorre de sua origem Open Source. Por ter milhares de mantenedores e desenvolvedores ativos nos projetos Linux, o sistema operacional possui um forte atestado de funcionamento, o que garante sua estabilidade. Devido a este fato também, sistemas Linux possuem repositórios oficiais de software, o que garante que estes softwares não são nocivos ao sistema ou à plataforma.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % PROBLEMA
@@ -58,8 +65,7 @@ Outra política existente é a do escalonador Round Robin (RR) comumente utiliza
 \subsection{Escalonador Other}
 A última política utilizada pelo kernel Linux corresponde a uma fila com vários níveis de prioridades dinâmicas com tempo compartilhado para cada processo. Os processos interativos e \emph{batch} (processos estáticos) são escalonados através deste escalonador (\emph{sched\_other}).
 
-\pagebreak
-
+\subsection{Starvation}
 O problema, entretanto, com as políticas utilizadas pelo escalonador de processos do kernel Linux é a possibilidade de ocorrência de \emph{starvation}, problema este que pode ser resolvido com a distribuição de prioridades não-nulas, como implementado na política de escalonamento de loteria (\emph{lottery scheduling}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -78,7 +84,8 @@ O problema, entretanto, com as políticas utilizadas pelo escalonador de process
 % REFERÊNCIAS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{thebibliography}{9}
-\bibitem{LinuxWikipedia2016} Wikipedia. \emph{Linux}. 2016. \url{https://en.wikipedia.org/wiki/Linux}
+\bibitem{LinuxWikipedia2016} Wikipedia. \emph{Linux}. 2016. \url{https://pt.wikipedia.org/wiki/Linux}
+\bibitem{Welsh1998} Matt Welsh et al. \emph{Linux Installation and Getting Started}. 1998. \url{http://www.tldp.org/LDP/gs/gs.html}
 \bibitem{Oliveira2008} Rômulo S. de Oliveira, Alexandre da S. Carissimi, Simão S. Toscani. \emph{Sistemas Operacionais}. 2008.
 \bibitem{Deitel2006} Harvey M. Deitel, Paul J. Deitel, David R. Choffnes. \emph{Operating Systems}. 2006.
 \end{thebibliography}
