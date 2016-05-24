@@ -1,0 +1,137 @@
+\documentclass[a4paper,12pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+
+\usepackage{url}
+\usepackage{graphicx}
+
+% Listings
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\renewcommand{\lstlistingname}{Anexo}
+\lstset{frame=tb,
+  language=C,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+% ASM packages
+\usepackage{amsmath, amstext, amsfonts}
+
+\setlength{\parskip}{0.9em}
+\renewcommand{\baselinestretch}{1.2}
+
+% CABEÇALHO
+\title{Desenvolvimento de uma política de escalonamento de loteria para o kernel Linux}
+\author{
+    Arthur Xavier\\
+    \small{xavier@dcc.ufmg.br}
+    \and
+    Rodrigo Gontijo\\
+    \small{rodrigo.gontijo@dcc.ufmg.br}
+    \and
+    Caio Godoy\\
+    \small{caio.godoy@dcc.ufmg.br}
+}
+
+\begin{document}
+
+\maketitle
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% INTRODUÇÃO
+% Retomada do problema e da solução proposta
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introdução}
+O escalonador do Linux é baseado em compartilhamento de tempo por prioridades, ou seja cada tarefa é executada até que a sua fatia de tempo, também chamada de quantum, expire, e um processo de prioridade mais alta torne-se executável ou o processo atual bloqueie.
+
+O kernel Linux utiliza três diferentes políticas de escalonamento, cada qual atende a tipos diferentes de processo: o \emph{Escalonador First In First Out}, válido apenas para processos de tempo real; o \emph{Escalonador Round Robin}, comumente utilizado em sistemas de tempo compartilhado e implementado utilizando-se uma fila circular; e o \emph{Escalonador Other}, o qual corresponde a uma fila com vários níveis de prioridades dinâmicas com tempo compartilhado para cada processo, utilizado para processos interativos e \emph{batch}.
+
+O problema, entretanto, com as políticas utilizadas pelo escalonador de processos do kernel Linux é a possibilidade de ocorrência de \emph{starvation} em ambientes multi-processados.
+
+A solução proposta neste trabalho foi baseada na política de escalonamento de loteria\cite{LSWikipedia2015}, pois o problema de \emph{starvation} pode serresolvido com a distribuição de prioridades não-nulas. Uma vantagem da política de escalonamento de loteria é que, distribuindo-se mais bilhetes para um determinado processo, aumenta-se as chances de este ser selecionado, sendo trivial implementar seleção por prioridades (não determinística).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% AMBIENTE
+% Sobre o ambiente de desenvolvimento utilizado
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Implementação}
+
+\subsection{Ambiente}
+Como primeiro passo para o começo do desenvolvimento de nossa proposta, acordamos na escolha de uma versão específica do kernel Linux. A versão Linux 3.2 \cite{Kernel2016} foi escolhida por ter boa documentação. Para o desenvolvimento e testes do sistema operacional, escolhemos utilizar o \emph{Ubuntu Linux 12.04 LTS} instalado em uma máquina virtual no \emph{Virtual Box}.
+
+\subsection{Controle e distribuição de bilhetes}
+Inicialmente, pela inexperiência e desconhecimento do extenso código do kernel Linux, optamos por implementar a estrutura de controle dos bilhetes ao invés de realizar quaisquer alterações no código base do kernel, enquanto nos adaptamos e conhecemos mais o código.
+
+Houveram muitas discussões sobre a maneira como os bilhetes e sua distribuição deveriam ser implementados, pois a escolha da estrutura de dados influenciaria diretamente no desempenho do novo escalonador. Um problema inicial é a alocação de bilhetes para um dado processo. Uma solução ingênua seria a criação de uma lista contendo os índices de todos os bilhetes de um processo. Um problema desta implementação é o alto custo de pesquisa, dado que uma vez sorteado um bilhete, no pior caso, deve-se pesquisar dentre todos os bilhetes que já foram distribuídos (para todos os processos).
+
+A estrutura de dados proposta e implementada foi, então, uma distribuição de bilhetes de forma que um processo somente possui bilhetes numerados em um intervalo de $[x, y],~ x, y \in \mathbb{N}$. O conjunto $B_n$ de bilhetes de um dado processo $n$ é então da forma $B_n = \{ i ~|~ i \in [x_n, y_n] \}$.
+
+\begin{lstlisting}[caption=Estrutura de distribuição de bilhetes]
+struct t_tickets {
+  long start;
+  long end;
+};
+\end{lstlisting}
+
+Embora o problema da consulta seja resolvido com esta estrutura, outros surgem, por exemplo: o que deve ser feito com os bilhetes de um processo terminado? Como realocar os bilhetes de um processo que teve sua prioridade alterada? Como lidar com o caso de nenhum processo ser sorteado devido a buracos na distribuição de bilhetes?
+
+Estes não são problemas simples de serem resolvidos, pois qualquer estrutura de dados implica em um \emph{tradeoff} em algum ponto. Felizmente a maturidade do kernel Linux foi de grande ajuda neste momento, pois os dois primeiros problemas foram resolvidos com a utilização de uma estrutura já presente no kernel e extensivamente utilizada: o \emph{slab allocator}, uma lista que é utilizada como uma cache para alocação dinâmica.
+
+\subsection{Distribuição de prioridades}
+A distribuição e o conceito de prioridades de execução para processos, no contexto da política de loteria, é natural e inata da política. A prioridade de um processo é diretamente proporcional ao número de bilhetes que possui. Desta forma, segundo a estrutura de distribuição de bilhetes utilizadas, seria correto utilizar uma estrutura semelhante para a distribuição de prioridades, isto é, baseada em intervalos.
+
+No kernel Linux, a prioridade de um processo varia de 1 a 10, sendo 1 o mais prioritário e 10 o menos prioritário. Desta forma foi estabelecido que os bilhetes serão distribuídos em múltiplos de 10, tal que um processo de prioridade 1 possui 100 bilhetes enquanto um processo de prioridade 10 possui apenas 10 bilhetes.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% PRÓXIMOS OBJETIVOS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Próximos objetivos}
+Na próxima etapa do trabalho, com o ambiente estabelecido e o código do kernel bem estudado, devemos dar continuidade à implementação das funcionalidades restantes para o correto funcionamento do escalonador. Para tal, resta-nos, segundo o planejamento inicial:
+
+\begin{enumerate}
+  \item Implementar o controle dos bilhetes, isto é, as funções de distribuição e gerenciamento dos bilhetes baseadas na estrutura já implementada. Planejamos utilizar uma estrutura de \emph{buffer} baseada em listas encadeadas para a geração, distribuição e consulta de bilhetes;
+  \item Implementação do escalonador em si, através da instanciação de uma estrutura \emph{sched\_class}, a qual deve conter a nova política de escalonamento, funções de gerenciamento da fila de processos e verificação de preempção de processos. Deverá ser implementada também, uma nova estrutura para a fila de processos, que funcionará integrada à nova política implementada. O escalonador será o responsável por escolher aleatóriamente um novo processo a ser executado;
+  \item Alterar as funções e estruturas já existentes, isto é, conectar o novo escalonador ao kernel.
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% CONCLUSÃO
+% Conclusão/resumo geral e resultados esperados
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusão}
+O tamanho do código do kernel Linux foi suficiente para que grande parte do tempo inicial do desenvolvimento do trabalho fosse gasto com o estudo e entendimento do código. A configuração e utilização do ambiente (máquina virtual e sistema operacional) também se mostraram empecilhos para a implementação e testes.
+
+Às hipóteses e teorias desenvolvidas nesta etapa resta, portanto, uma validação. Espera-se poder concluir a implementação do escalonador com a nova política e do gerenciamento e distribuição de bilhetes e prioridades nesta próxima etapa do trabalho.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% REFERÊNCIAS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{thebibliography}{9}
+\bibitem{LSWikipedia2015} Wikipedia. \emph{Lottery Scheduling}. 2015. \url{https://en.wikipedia.org/wiki/Lottery_scheduling}
+\bibitem{Kernel2016} Linux Kernel Organization. \emph{The Linux Kernel Archives}. 2016. \url{https://www.kernel.org/}
+\end{thebibliography}
+
+\end{document}
